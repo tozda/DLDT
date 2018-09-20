@@ -2,37 +2,60 @@ import urllib.request
 from html.parser import HTMLParser
 import re
 
-extractedURLs = [] # variable for extracted urls
+# variable for extracted urls
+extracted_urls = []
 
-# pobiera kod htmlowy dostepny pod wskazanym adresem webowym (URL)
-def gethtmlfromurl(url, proxy):
-    # jeżli masz wartoś proxy to zdefiniuj proxy typu http
-    if proxy:
+
+# gets html code from web file under url
+def get_html_from_url(url, proxy, with_proxy):
+
+    if with_proxy == 1:  # if proxy variable define configure proxy
         urllib.request.ProxyHandler({"http": proxy})
-        
-    # pobierz kod html z wskazanego adresu
-    with urllib.request.urlopen(url) as response:
-        htmlcode = response.read()
-        return htmlcode # i go zwróc
+        with urllib.request.urlopen(url) as response:
+            html_code = response.read()
+    else:
+        with urllib.request.urlopen(url) as response:
+            html_code = response.read()
 
-# pobiera odnośniki typu 'a'/'href' z kodu html
-def gethreffromhtml(htmlcode):
-    parser = MyHTMLParser() # ninicjalizacja objektu HTMLParser
-    parser.feed(str(htmlcode)) # sparsowanie kodu html
+    return html_code
+
+
+# gets only hrefs from html file.  gets 'a' tags = http
+def get_href_from_html(html_code):
+    parser = MyHTMLParser()
+    parser.feed(str(html_code))
     parser.close()
-    return extractedURLs
-# ============================================================================
-class MyHTMLParser(HTMLParser): # Parser html
+    return extracted_urls
+
+
+def get_hrefs_by_pattern(hrefs, pattern):
+    # Get only URLs referencing to the yearbooks of given newspaper
+    urls_by_pattern = []
+    for href in hrefs:
+        href_string = str(href)
+        my_href = re.search(pattern, href_string)
+        if my_href:
+            urls_by_pattern.append(href_string)
+
+    return urls_by_pattern
+
+
+# ==============================================================================
+
+
+class MyHTMLParser(HTMLParser):
     """
     Parser for getting URLs
-    Only 'a' tags with 'title' attribute considered
+    Only 'a' tags considered
+    TODO: 'a' tags with 'title' attribute
     """
-    
-    # Only tag 'a'
+
     def handle_starttag(self, tag, attrs):
 
         if tag == 'a':
-            extractedURLs.append(attrs)
+            for attr in attrs:
+                title = re.search("title", str(attr))
+                if title:
+                    extracted_urls.append(attrs)
 
-        return extractedURLs
-
+        return extracted_urls
